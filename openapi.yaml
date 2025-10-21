@@ -7,15 +7,14 @@ info:
 
 # địa chỉ server nơi API chạy
 servers: 
-  - url: https://api.example.com/v1
-    description: Production server
-  - url: https://localhost:8000/v1
+  - url: /
     description: Development server
 
 paths:
   /books:
     get: 
       summary: Lấy danh sách tất cả sách
+      operationId: app.get_all_books
       description: Trả về 1 mảng chứa tất cả sách trong hệ thống
       tags: 
         - Books
@@ -30,6 +29,7 @@ paths:
                   $ref: '#/components/schemas/Book'
     post:
       summary: Tạo mới một cuốn sách
+      operationId: app.create_book
       description: Thêm một cuốn sách vào hệ thống
       tags:
         - Books
@@ -41,7 +41,7 @@ paths:
             schema:
               $ref: '#/components/schemas/BookInput'
       responses:
-        '200':
+        '201':
           description: Sách đã được tạo thành công
           content:
             application/json:
@@ -58,6 +58,7 @@ paths:
           type: integer
     get:
       summary: Lấy các cuốn sách
+      operationId: app.get_book_by_id
       tags:
         - Books
       responses: 
@@ -71,6 +72,7 @@ paths:
           description: Không tìm thấy sách 
     put:
       summary: Cập nhật cuốn sách
+      operationId: app.update_book_by_id
       tags:
         - Books
       requestBody:
@@ -87,10 +89,11 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Book'
-        '400':
+        '404':
           description: Không tìm thấy sách
     delete:
       summary: Xóa cuốn sách
+      operationId: app.delete_book_by_id
       tags:
         - Books
       responses: 
@@ -99,20 +102,20 @@ paths:
         '404':
           description: Xóa cuốn sách không thành công
   # tái sử dụng parameters:
-  /books/{bookID}:
-    parameters: # vì parameters có thể là danh sách tham số nên cần dấu " - "
-      - $ref: '#/components/parameters/BookIDPath'   
-    get:  
-      summary: Lấy các cuốn sách
-      tags:
-        - Books
-      response:
-        '200':
-          description: Lấy cuốn sách thành công
-          content:
-            application/json:
-              schema:
-                $ref: '#components/schemas/Book'
+  # /books/{bookID}:
+  #   parameters: # vì parameters có thể là danh sách tham số nên cần dấu " - "
+  #     - $ref: '#/components/parameters/BookIDPath'   
+  #   get:  
+  #     summary: Lấy các cuốn sách
+  #     tags:
+  #       - Books
+  #     response:
+  #       '200':
+  #         description: Lấy cuốn sách thành công
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#components/schemas/Book'
 components:
   schemas:
     Book: # cuốn sách có sẵn trong db
