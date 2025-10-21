@@ -1,44 +1,29 @@
-from flask import Blueprint, jsonify, request
-from data import USERS, POSTS
+# rules/consistency.py
+from flask import Blueprint, jsonify
+from data import users_db, order_items_db
 
-bp = Blueprint("consistency", __name__)
+good_consistency_bp = Blueprint('good_consistency_bp', __name__)
 
-# ====== GOOD: Nhất quán path param, field style, và error format ======
-@bp.get("/good/users")
-def good_list_users():
-    return jsonify([
-        {"id": u["id"], "full_name": u["full_name"], "email": u["email"]} 
-        for u in USERS
-    ])  #các field có cùng kiểu viết: full_name, id,...
+def create_success_response(data):
+    return jsonify({"status": "success", "data": data})
 
-@bp.get("/good/users/<int:user_id>")
-def good_get_user(user_id: int):
-    user = next((u for u in USERS if u["id"] == user_id), None)
-    if not user:
-        return jsonify({"detail": "User not found"}), 404
-    return jsonify({"id": user["id"], "full_name": user["full_name"], "email": user["email"]})
-    # field có cùng kiểu viết, truyền vào path param 
+@good_consistency_bp.route('/users', methods=['GET'])
+def get_users_consistent():
+    return create_success_response(list(users_db.values()))
 
-@bp.get("/good/posts/<int:post_id>")
-def good_get_post(post_id: int):
-    post = next((p for p in POSTS if p["id"] == post_id), None)
-    if not post:
-        return jsonify({"detail": "Post not found"}), 404
-    return jsonify(post)
-#có dữ liệu trả về theo dạng {...}, lỗi thì trả về {"detail":...}
+@good_consistency_bp.route('/order-items', methods=['GET'])
+def get_order_items_consistent():
+    # Cả hai đều trả về cùng cấu trúc
+    return create_success_response(list(order_items_db.values()))
 
-# ====== BAD: Không nhất quán (query vs path, error key lẫn lộn, case style lộn xộn) ======
-@bp.get("/bad/api/posts")
-def bad_posts_get():
-    """
-    - Dùng query param cho id (post_id) thay vì path param.
-    - Error key khi thì 'message', khi thì 'error'.
-    - Trộn camelCase & snake_case.
-    """
-    pid = request.args.get("post_id", type=int)
-    if pid is None:
-        return jsonify({"message": "post_id query is required"}), 400
-    post = next((p for p in POSTS if p["id"] == pid), None)
-    if not post:
-        return jsonify({"error": "This post does not exist"}), 404
-    return jsonify({"postId": post["id"], "post_title": post["title"], "authorId": post["author_id"]})
+bad_consistency_bp = Blueprint('bad_consistency_bp', __name__)
+
+@bad_consistency_bp.route('/users', methods=['GET'])
+def get_users_inconsistent():
+    # Trả về một object với key là "users"
+    return jsonify({"users": list(users_db.values())})
+
+@bad_consistency_bp.route('/order-items', methods=['GET'])
+def get_order_items_inconsistent():
+    # Lại trả về một list trần, không có key bao bọc
+    return jsonify(list(order_items_db.values()))

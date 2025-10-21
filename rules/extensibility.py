@@ -1,44 +1,38 @@
-from flask import Blueprint, jsonify, url_for
-from data import USERS
+# rules/extensibility.py
+from flask import Blueprint, jsonify
+from data import users_db
 
-bp = Blueprint("extensibility", __name__)
+good_extensibility_bp = Blueprint('good_extensibility_bp', __name__)
 
-# ====== GOOD: Có versioning — v1 và v2 cùng tồn tại an toàn ======
-@bp.get("/good/v1/users/<int:user_id>")
-def v1_get_user(user_id: int):
-    """
-    v1 schema: giữ 'name' (client cũ vẫn chạy ổn)
-    """
-    user = next((u for u in USERS if u["id"] == user_id), None)
-    if not user:
-        return jsonify({"detail": "User not found"}), 404
-    return jsonify({"id": user["id"], "name": user["full_name"], "email": user["email"]})
+@good_extensibility_bp.route('/v1/users/<int:user_id>', methods=['GET'])
+def get_user_v1(user_id):
+    user = users_db.get(user_id, {})
+    # V1 chỉ trả về các trường cơ bản
+    return jsonify({"id": user.get("id"), "name": user.get("name")})
 
-@bp.get("/good/v2/users/<int:user_id>")
-def v2_get_user(user_id: int):
-    """
-    v2 schema: tách firstName/lastName (breaking change) nhưng an toàn nhờ version.
-    """
-    user = next((u for u in USERS if u["id"] == user_id), None)
-    if not user:
-        return jsonify({"detail": "User not found"}), 404
-    first, *last = user["full_name"].split(" ")
+@good_extensibility_bp.route('/v2/users/<int:user_id>', methods=['GET'])
+def get_user_v2(user_id):
+    user = users_db.get(user_id, {})
+    # V2 mở rộng thêm dữ liệu mà không làm hỏng V1
     return jsonify({
-        "id": user["id"],
-        "firstName": first,
-        "lastName": " ".join(last) if last else "",
-        "email": user["email"],
+        "id": user.get("id"),
+        "name": user.get("name"),
+        "email": user.get("email"), # Thêm trường mới
+        "status": "active"        # Thêm trường mới
     })
 
-# ====== BAD: Thay đổi phá vỡ schema mà không version ======
-@bp.get("/bad/users/<int:user_id>")
-def bad_breaking_change(user_id: int):
-    """
-    Ví dụ SAI:
-    - Ban đầu trả {"id","name"}; sau đó sửa thành {"id","firstName","lastName"} => client cũ lỗi.
-    """
-    user = next((u for u in USERS if u["id"] == user_id), None)
-    if not user:
-        return jsonify({"msg": "not found"}), 404  # lỗi format không nhất quán
-    first, *last = user["full_name"].split(" ")
-    return jsonify({"id": user["id"], "firstName": first, "lastName": " ".join(last)})
+bad_extensibility_bp = Blueprint('bad_extensibility_bp', __name__)
+
+@bad_extensibility_bp.route('/users/<int:user_id>', methods=['GET'])
+def get_user_no_version(user_id):
+    user = users_db.get(user_id, {})
+    # Ban đầu api trả về chỉ id và name
+    # return jsonify({"id": user.get("id"), "name": user.get("name")})
+    
+    # Muốn thêm trường email, ta thêm trực tiếp vào API hiện tại
+    # -> Tất cả ứng dụng client cũ đang dùng API này có thể bị lỗi vì ban đầu không có email
+    return jsonify({
+        "id": user.get("id"),
+        "name": user.get("name"),
+        "email": user.get("email") 
+    })
