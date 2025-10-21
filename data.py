@@ -1,15 +1,10 @@
-USERS = [
-    {"id": 1, "full_name": "John Doe", "email": "john.doe@example.com"},
-    {"id": 2, "full_name": "Jane Smith", "email": "jane.smith@example.com"},
-]
+users_db = {
+    1: {"id": 1, "name": "Alice", "email": "alice@example.com"},
+    2: {"id": 2, "name": "Bob", "email": "bob@example.com"},
+}
+next_user_id = 3
 
-POSTS = [
-    {"id": 10, "title": "Hello Flask", "author_id": 1},
-    {"id": 11, "title": "API Design", "author_id": 2},
-]
-
-ORDERS = [
-    {"id": 101, "created_date": "2023-12-29"},
-    {"id": 102, "created_date": "2024-01-02"},
-    {"id": 103, "created_date": "2024-03-17"},
-]
+order_items_db = {
+    101: {"id": 101, "product_name": "Laptop", "quantity": 1},
+    102: {"id": 102, "product_name": "Mouse", "quantity": 2},
+}
