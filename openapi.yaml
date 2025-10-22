@@ -10,10 +10,34 @@ servers:
   - url: /
     description: Development server
 
+security:
+  - bearerAuth: []  # áp dụng bảo mật cho toàn bộ API, API nào không cần bảo mật thì ghi đè trong paths (security: [])
 paths:
+  /login:
+    post:
+      summary: Đăng nhập người dùng
+      operationId: app.login
+      security: []  # không yêu cầu bảo mật cho endpoint này
+      requestBody:
+        description: Thông tin đăng nhập của người dùng
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+      responses:
+        '200':
+          description: Lấy token thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          description: Đăng nhập thất bại
   /books:
     get: 
       summary: Lấy danh sách tất cả sách
+      security: []  # không yêu cầu bảo mật cho endpoint này
       operationId: app.get_all_books
       description: Trả về 1 mảng chứa tất cả sách trong hệ thống
       tags: 
@@ -54,7 +78,7 @@ paths:
         in: path #tham số nằm trên đường dẫn
         required: true
         description: ID của cuốn sách cần thao tác
-        schema: # cần schemas để mô tả kiểu dữ liệu (từ 2.x đổ về thì không cần)
+        schema:
           type: integer
     get:
       summary: Lấy các cuốn sách
@@ -117,6 +141,12 @@ paths:
   #             schema:
   #               $ref: '#components/schemas/Book'
 components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-bearerInfoFunc: app.decode_token # khi nhận 1 bearer token thì sẽ gọi hàm này để giải mã token và lấy thông tin người dùng
   schemas:
     Book: # cuốn sách có sẵn trong db
       type: object
@@ -151,6 +181,24 @@ components:
       required:
         - title
         - author
+    LoginCredentials:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Tên đăng nhập
+          example: "user123"
+        password:
+          type: string
+          description: Mật khẩu đăng nhập
+          example: "pass123"
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Mã token dùng để xác thực người dùng
+          example: "eyJhbGciOi"
   # viết trong components để tái sử dụng parameters:
   # parameters:
   #   BookIDPath:
