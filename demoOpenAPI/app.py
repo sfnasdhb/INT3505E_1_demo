@@ -16,10 +16,14 @@ db_users = {
 db_books = {
     1: {"id": 1, "title": "Lão Hạc", "author": "Nam Cao"},
     2: {"id": 2, "title": "Số Đỏ", "author": "Vũ Trọng Phụng"},
-    3: {"id": 1, "title": "Lão Hạc2", "author": "Nam Cao"},
-    4: {"id": 2, "title": "Số Đỏ2", "author": "Vũ Trọng Phụng"},
-    5: {"id": 1, "title": "Lão Hạc3", "author": "Nam Cao"},
-    6: {"id": 2, "title": "Số Đỏ3", "author": "Vũ Trọng Phụng"},
+    3: {"id": 3, "title": "Chí Phèo", "author": "Nam Cao"},
+    4: {"id": 4, "title": "Tắt Đèn", "author": "Ngô Tất Tố"},
+    5: {"id": 5, "title": "Giông Tố", "author": "Vũ Trọng Phụng"},
+    6: {"id": 6, "title": "Đời Thừa", "author": "Nam Cao"},
+    7: {"id": 7, "title": "Việc Làng", "author": "Ngô Tất Tố"},
+    8: {"id": 8, "title": "Sống Mòn", "author": "Nam Cao"},
+    9: {"id": 9, "title": "Vỡ Đê", "author": "Vũ Trọng Phụng"},
+    10: {"id": 10, "title": "Lều Chõng", "author": "Ngô Tất Tố"},
 }
 
 book_id_counter = len(db_books)
@@ -46,8 +50,36 @@ def login(body):
         return {'access_token': token}, 200
     return {'message': 'Invalid credentials'}, 401
 
-def get_all_books():
-    return list(db_books.values()), 200
+def get_all_books(limit=10, offset=0, author=None, title_contains=None):
+    books = list(db_books.values())
+    
+    # 1. Logic lọc (Filtering)
+    if author:
+        # Lọc theo tên tác giả (không phân biệt hoa thường)
+        books = [book for book in books if book['author'].lower() == author.lower()]
+
+    if title_contains:
+        # Lọc theo tiêu đề chứa từ khóa (không phân biệt hoa thường)
+        books = [book for book in books if title_contains.lower() in book['title'].lower()]
+        
+    # Lấy tổng số sách *sau khi* đã lọc để phân trang cho đúng
+    total_items = len(books)
+
+    # 2. Logic phân trang (Pagination)
+    paginated_books = books[offset : offset + limit]
+
+    # 3. Tạo cấu trúc response
+    response = {
+        "metadata": {
+            "total_items": total_items,
+            "offset": offset,
+            "limit": limit,
+            "item_count": len(paginated_books) 
+        },
+        "data": paginated_books
+    }
+    
+    return response, 200
 
 def get_book_by_id(bookID, token_info): 
     book = db_books.get(bookID)

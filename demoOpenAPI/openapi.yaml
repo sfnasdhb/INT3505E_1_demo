@@ -39,18 +39,36 @@ paths:
       summary: Lấy danh sách tất cả sách
       security: []  # không yêu cầu bảo mật cho endpoint này
       operationId: app.get_all_books
-      description: Trả về 1 mảng chứa tất cả sách trong hệ thống
-      tags: 
-        - Books
+      parameters:
+        - name: limit
+          in: query
+          description: Số lượng sách tối đa trên một trang
+          schema:
+            type: integer
+            default: 10
+        - name: offset
+          in: query
+          description: Vị trí bắt đầu lấy (số sách bỏ qua)
+          schema:
+            type: integer
+            default: 0
+        - name: author
+          in: query
+          description: Lọc sách theo tên tác giả
+          schema:
+            type: string
+        - name: title_contains
+          in: query
+          description: Tìm sách có tiêu đề chứa từ khóa
+          schema:
+            type: string
       responses:
-        '200': # khi thành công thì:
-          description: Một danh sách các sách
+        '200':
+          description: Một danh sách sách đã được lọc và phân trang
           content:
-            application/json: # định dạng mà dữ liệu gửi lên hay trả về
+            application/json:
               schema:
-                type: array # trả về mảng danh sách
-                items:
-                  $ref: '#/components/schemas/Book'
+                $ref: '#/components/schemas/PaginatedBookResponse'
     post:
       summary: Tạo mới một cuốn sách
       operationId: app.create_book
@@ -199,6 +217,35 @@ components:
           type: string
           description: Mã token dùng để xác thực người dùng
           example: "eyJhbGciOi"
+    PaginatedBookResponse:
+      type: object
+      description: Một response chứa danh sách sách đã được phân trang và metadata.
+      properties:
+        metadata:
+          type: object
+          description: Chứa thông tin về việc phân trang.
+          properties:
+            total_items:
+              type: integer
+              description: Tổng số sách (sau khi đã lọc) khớp với truy vấn.
+              example: 10
+            offset:
+              type: integer
+              description: Vị trí bắt đầu (offset) đã được sử dụng.
+              example: 0
+            limit:
+              type: integer
+              description: Giới hạn số lượng (limit) đã được sử dụng.
+              example: 10
+            item_count:
+              type: integer
+              description: Số lượng sách thực tế trong mảng 'data' của response này.
+              example: 10
+        data:
+          type: array
+          description: Mảng chứa các đối tượng sách.
+          items:
+            $ref: '#/components/schemas/Book'
   # viết trong components để tái sử dụng parameters:
   # parameters:
   #   BookIDPath:
