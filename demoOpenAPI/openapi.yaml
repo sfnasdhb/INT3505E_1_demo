@@ -1,0 +1,222 @@
+openapi: 3.0.0
+
+info:
+  title: API quản lý sách
+  description: ...
+  version: 1.0.1
+
+# địa chỉ server nơi API chạy
+servers: 
+  - url: /
+    description: Development server
+
+security:
+  - bearerAuth: []  # áp dụng bảo mật cho toàn bộ API, API nào không cần bảo mật thì ghi đè trong paths (security: [])
+paths:
+  /login:
+    post:
+      summary: Đăng nhập người dùng
+      operationId: app.login
+      security: []  # không yêu cầu bảo mật cho endpoint này
+      requestBody:
+        description: Thông tin đăng nhập của người dùng
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/LoginCredentials'
+      responses:
+        '200':
+          description: Lấy token thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Token'
+        '401':
+          description: Đăng nhập thất bại
+  /books:
+    get: 
+      summary: Lấy danh sách tất cả sách
+      security: []  # không yêu cầu bảo mật cho endpoint này
+      operationId: app.get_all_books
+      description: Trả về 1 mảng chứa tất cả sách trong hệ thống
+      tags: 
+        - Books
+      responses:
+        '200': # khi thành công thì:
+          description: Một danh sách các sách
+          content:
+            application/json: # định dạng mà dữ liệu gửi lên hay trả về
+              schema:
+                type: array # trả về mảng danh sách
+                items:
+                  $ref: '#/components/schemas/Book'
+    post:
+      summary: Tạo mới một cuốn sách
+      operationId: app.create_book
+      description: Thêm một cuốn sách vào hệ thống
+      tags:
+        - Books
+      requestBody:
+        description: Đối tượng sách cần được tạo
+        required: true # yêu cầu người gửi phải gửi đúng theo định dạng nếu không server sẽ trả về lỗi
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookInput'
+      responses:
+        '201':
+          description: Sách đã được tạo thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+  /books/{bookID}:
+    # dùng trực tiếp trong endpoint
+    parameters: # vì có thể truyền nhiều tham số, nên ta cần - name để liệt kê
+      - name: bookID
+        in: path #tham số nằm trên đường dẫn
+        required: true
+        description: ID của cuốn sách cần thao tác
+        schema:
+          type: integer
+    get:
+      summary: Lấy các cuốn sách
+      operationId: app.get_book_by_id
+      tags:
+        - Books
+      responses: 
+        '200':
+          description: Lấy sách thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          description: Không tìm thấy sách 
+    put:
+      summary: Cập nhật cuốn sách
+      operationId: app.update_book_by_id
+      tags:
+        - Books
+      requestBody:
+        description: Lấy dữ liệu đầu vào
+        required: true
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookInput'
+      responses:
+        '200':
+          description: Cập nhật sách thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Book'
+        '404':
+          description: Không tìm thấy sách
+    delete:
+      summary: Xóa cuốn sách
+      operationId: app.delete_book_by_id
+      tags:
+        - Books
+      responses: 
+        '204': # vì không có dữ liệu trả về nên ta dùng mã 204
+          description: Xóa cuốn sách thành công
+        '404':
+          description: Xóa cuốn sách không thành công
+  # tái sử dụng parameters:
+  # /books/{bookID}:
+  #   parameters: # vì parameters có thể là danh sách tham số nên cần dấu " - "
+  #     - $ref: '#/components/parameters/BookIDPath'   
+  #   get:  
+  #     summary: Lấy các cuốn sách
+  #     tags:
+  #       - Books
+  #     response:
+  #       '200':
+  #         description: Lấy cuốn sách thành công
+  #         content:
+  #           application/json:
+  #             schema:
+  #               $ref: '#components/schemas/Book'
+components:
+  securitySchemes:
+    bearerAuth:
+      type: http
+      scheme: bearer
+      bearerFormat: JWT
+      x-bearerInfoFunc: app.decode_token # khi nhận 1 bearer token thì sẽ gọi hàm này để giải mã token và lấy thông tin người dùng
+  schemas:
+    Book: # cuốn sách có sẵn trong db
+      type: object
+      properties:
+        id:
+          type: integer
+          description: ID định danh sách
+          example: 10
+        title:
+          type: string
+          description: Tiêu đề của cuốn sách
+          example: "Lão Hạc"
+        author:
+          type: string
+          description: Tên tác giả
+          example: "Nam Cao"
+      required: # cho biết những trường nào bắt buộc cần có khi gửi request hoặc response
+        - id
+        - title
+        - author
+    BookInput: #tạo mới sách nên chưa có id
+      type: object
+      properties:
+        title:
+          type: string
+          description: Tiêu đề của cuốn sách.
+          example: "Số Đỏ"
+        author:
+          type: string
+          description: Tên tác giả của cuốn sách.
+          example: "Vũ Trọng Phụng"
+      required:
+        - title
+        - author
+    LoginCredentials:
+      type: object
+      properties:
+        username:
+          type: string
+          description: Tên đăng nhập
+          example: "user123"
+        password:
+          type: string
+          description: Mật khẩu đăng nhập
+          example: "pass123"
+    Token:
+      type: object
+      properties:
+        access_token:
+          type: string
+          description: Mã token dùng để xác thực người dùng
+          example: "eyJhbGciOi"
+  # viết trong components để tái sử dụng parameters:
+  # parameters:
+  #   BookIDPath:
+  #     name: BookID
+  #     in: path
+  #     required: true
+  #     description: ID của cuốn sách cần tìm
+  #     schema:
+  #       type: integer  
+
+# paths:
+#   /books/{bookID}:
+#     parameters:
+#       - $ref: '#/components/parameters/BookIdPath'
+#     get: 
+#       summary: Lấy ra cuốn sách
+#   /recommendations/for-book/{bookID}: 
+#     parameters:
+#       - $ref: '#/components/parameters/BookIdPath'
+#     get: 
+#       summary: Lấy các cuốn sách dựa trên sách gốc ở trên
