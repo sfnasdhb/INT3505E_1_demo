@@ -53,22 +53,16 @@ def login(body):
 def get_all_books(limit=10, offset=0, author=None, title_contains=None):
     books = list(db_books.values())
     
-    # 1. Logic lọc (Filtering)
     if author:
-        # Lọc theo tên tác giả (không phân biệt hoa thường)
         books = [book for book in books if book['author'].lower() == author.lower()]
 
     if title_contains:
-        # Lọc theo tiêu đề chứa từ khóa (không phân biệt hoa thường)
         books = [book for book in books if title_contains.lower() in book['title'].lower()]
         
-    # Lấy tổng số sách *sau khi* đã lọc để phân trang cho đúng
     total_items = len(books)
 
-    # 2. Logic phân trang (Pagination)
     paginated_books = books[offset : offset + limit]
 
-    # 3. Tạo cấu trúc response
     response = {
         "metadata": {
             "total_items": total_items,
@@ -80,6 +74,14 @@ def get_all_books(limit=10, offset=0, author=None, title_contains=None):
     }
     
     return response, 200
+    #tuy nhiên sẽ xảy ra lỗi offset nếu offset > total_items
+    #lỗi không đồng bộ, tức ví dụ:
+    #A,B,C,D,E,F,G,H,I,J
+    #limit=5,offset=0 -> A,B,C,D,E
+    #xóa E -> limit=5,offset=5 -> G,H,I,J (thiếu F) (A,B,C,D,F,G,H,I,J)
+    #đang xem trang 1 có A, B, C, D, F
+    #chèn V vào giữa D và F -> A,B,C,D,V,F,G,H,I,J
+    #limit=5,offset=5 -> F,G,H,I,J -> nhìn thấy F hai lần
 
 def get_book_by_id(bookID, token_info): 
     book = db_books.get(bookID)
