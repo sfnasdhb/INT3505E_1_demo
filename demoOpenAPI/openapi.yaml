@@ -34,6 +34,27 @@ paths:
                 $ref: '#/components/schemas/Token'
         '401':
           description: Đăng nhập thất bại
+  /reset-db:
+    post:
+      summary: Khôi phục CSDL về trạng thái ban đầu
+      operationId: app.reset_db
+      responses:
+        '200':
+          description: CSDL đã được khôi phục
+
+  /simulate-insert-start:
+    post:
+      summary: Chèn một sách mới vào đầu danh sách
+      operationId: app.simulate_insert_start
+      requestBody:
+        content:
+          application/json:
+            schema:
+              $ref: '#/components/schemas/BookInput'
+      responses:
+        '201':
+          description: Sách mới đã được chèn
+  
   /books:
     get: 
       summary: Lấy danh sách tất cả sách
@@ -89,6 +110,30 @@ paths:
             application/json:
               schema:
                 $ref: '#/components/schemas/Book'
+  /book-cursor:
+    get:
+      summary: Lấy danh sách sử dụng cursor pagination
+      operationId: app.get_all_books_by_cursor
+      parameters:
+        - name: limit
+          in: query
+          description: Số lượng sách tối đa
+          schema:
+            type: integer
+            default: 5
+        - name: after_cursor
+          in: query
+          description: Con trỏ để lấy trang kế tiếp 
+          schema:
+            type: integer
+            default: 0       
+      responses:
+        '200':
+          description: Lấy thành công danh sách   
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CursorPaginatedBookResponse'
   /books/{bookID}:
     # dùng trực tiếp trong endpoint
     parameters: # vì có thể truyền nhiều tham số, nên ta cần - name để liệt kê
@@ -143,6 +188,21 @@ paths:
           description: Xóa cuốn sách thành công
         '404':
           description: Xóa cuốn sách không thành công
+    
+  /books-with-author-n1:
+    get:
+      summary: Lấy danh sách với N+1 query problem
+      operationId: app.get_books_with_author_n1
+      responses:
+        '200':
+          description: Lấy danh sách thành công
+          content:
+            application/json:
+              schema:
+                type: array
+                items:
+                  $ref: '#/components/schemas/BookWithAuthor'
+
   # tái sử dụng parameters:
   # /books/{bookID}:
   #   parameters: # vì parameters có thể là danh sách tham số nên cần dấu " - "
@@ -166,6 +226,22 @@ components:
       bearerFormat: JWT
       x-bearerInfoFunc: app.decode_token # khi nhận 1 bearer token thì sẽ gọi hàm này để giải mã token và lấy thông tin người dùng
   schemas:
+    Author:
+      type: object
+      properties:
+        id:
+          type: integer
+        name:
+          type: string
+    BookWithAuthor:
+      type: object
+      properties:
+        id:
+          type: integer
+        title:
+          type: string
+        author:
+          $ref: '#/components/schemas/Author'
     Book: # cuốn sách có sẵn trong db
       type: object
       properties:
@@ -246,7 +322,33 @@ components:
           description: Mảng chứa các đối tượng sách.
           items:
             $ref: '#/components/schemas/Book'
-  # viết trong components để tái sử dụng parameters:
+    CursorPaginatedBookResponse:
+      type: object
+      properties:
+        metadata: #thông tin mô tả
+          type: object
+          properties:
+            item_count:
+              type: integer
+              description: Số lượng sách thực tế trong mảng 'data' của response này.
+              example: 5
+            next_cursor:
+              type: integer
+              description: Con trỏ để lấy trang kế tiếp.
+              example: 15
+              nullable: true
+            has_next_page:
+              type: boolean
+              description: Cho biết có trang kế tiếp hay không.
+              example: true
+        data: #thông tin dữ liệu trả về
+          type: array
+          description: Mảng chứa sách trả về
+          items:
+            $ref: '#/components/schemas/Book'
+
+
+  # viết trong components để tái sử dụng parameters: 
   # parameters:
   #   BookIDPath:
   #     name: BookID

@@ -11,19 +11,21 @@ db_users = {
         'username': 'admin',
         'password_hash': 'pbkdf2:sha256:260000$DJ48YJoSVrjHhGOG$4457d774cc220942a7c72b791becfad1327b7ccc5f2c8e5ebba25d46964721b9'  
     }
-
 }
+
+db_authors = {
+    101: {"id": 101, "name": "Nam Cao"},
+    102: {"id": 102, "name": "Vũ Trọng Phụng"},
+    103: {"id": 103, "name": "Ngô Tất Tố"}
+}
+
 db_books = {
-    1: {"id": 1, "title": "Lão Hạc", "author": "Nam Cao"},
-    2: {"id": 2, "title": "Số Đỏ", "author": "Vũ Trọng Phụng"},
-    3: {"id": 3, "title": "Chí Phèo", "author": "Nam Cao"},
-    4: {"id": 4, "title": "Tắt Đèn", "author": "Ngô Tất Tố"},
-    5: {"id": 5, "title": "Giông Tố", "author": "Vũ Trọng Phụng"},
-    6: {"id": 6, "title": "Đời Thừa", "author": "Nam Cao"},
-    7: {"id": 7, "title": "Việc Làng", "author": "Ngô Tất Tố"},
-    8: {"id": 8, "title": "Sống Mòn", "author": "Nam Cao"},
-    9: {"id": 9, "title": "Vỡ Đê", "author": "Vũ Trọng Phụng"},
-    10: {"id": 10, "title": "Lều Chõng", "author": "Ngô Tất Tố"},
+    1: {"id": 1, "title": "Lão Hạc", "author_id": 101},
+    2: {"id": 2, "title": "Số Đỏ", "author_id": 102},
+    3: {"id": 3, "title": "Chí Phèo", "author_id": 101},
+    4: {"id": 4, "title": "Tắt Đèn", "author_id": 103},
+    5: {"id": 5, "title": "Giông Tố", "author_id": 102},
+    6: {"id": 6, "title": "Đời Thừa", "author_id": 101},
 }
 
 initial_db_books = dict(db_books)
@@ -37,6 +39,49 @@ def reset_db():
     return {"message": "Database has been reset to its initial state."}, 200
 
 book_id_counter = len(db_books)
+
+def find_all_books():
+    # In ra log NGAY KHI được gọi
+    print("[DB-ACCESS] EXECUTING: SELECT * FROM books;")
+    return list(db_books.values())
+
+def find_author_by_id(author_id):
+    # In ra log NGAY KHI được gọi
+    print(f"[DB-ACCESS] EXECUTING: SELECT * FROM authors WHERE id = {author_id};")
+    return db_authors.get(author_id)
+    
+def find_authors_by_ids(author_ids):
+    unique_ids = set(author_ids)
+    # In ra log NGAY KHI được gọi
+    print(f"[DB-ACCESS] EXECUTING: SELECT * FROM authors WHERE id IN {tuple(unique_ids)};")
+    return {id: db_authors[id] for id in unique_ids if id in db_authors}
+
+def get_books_with_author_n1():
+    """
+    HÀM NÀY BỊ LỖI N+1 QUERY. DÙNG ĐỂ DEMO.
+    """
+    print("\n=== BẮT ĐẦU KỊCH BẢN LỖI N+1 QUERY ===")
+    
+    # 1. Lấy tất cả sách (THỰC HIỆN 1 CÂU QUERY ĐẦU TIÊN)
+    all_books = find_all_books()
+    
+    results = []
+    # 2. Lặp qua từng cuốn sách
+    for book in all_books:
+        # Với MỖI cuốn sách, lại thực hiện 1 CÂU QUERY để lấy tác giả
+        # Đây chính là N CÂU QUERY TIẾP THEO
+        author = find_author_by_id(book['author_id'])
+        
+        # Ghép kết quả
+        book_with_author = {
+            "id": book['id'],
+            "title": book['title'],
+            "author": author # Lồng đối tượng tác giả vào
+        }
+        results.append(book_with_author)
+        
+    print(f"=== KẾT THÚC KỊCH BẢN LỖI: TỔNG CỘNG {1 + len(all_books)} QUERIES ĐÃ ĐƯỢC THỰC THI! ===")
+    return results, 200
 
 def decode_token(token):
     try:
@@ -203,6 +248,22 @@ def delete_book_by_id(bookID, token_info):
         del db_books[bookID]
         return {"message": f"Book deleted: {title}"}, 200
     return {"message": "Book not found"}, 404
+
+def find_all_books():
+    # In ra log NGAY KHI được gọi
+    print("[DB-ACCESS] EXECUTING: SELECT * FROM books;")
+    return list(db_books.values())
+
+def find_author_by_id(author_id):
+    # In ra log NGAY KHI được gọi
+    print(f"[DB-ACCESS] EXECUTING: SELECT * FROM authors WHERE id = {author_id};")
+    return db_authors.get(author_id)
+    
+def find_authors_by_ids(author_ids):
+    unique_ids = set(author_ids)
+    # In ra log NGAY KHI được gọi
+    print(f"[DB-ACCESS] EXECUTING: SELECT * FROM authors WHERE id IN {tuple(unique_ids)};")
+    return {id: db_authors[id] for id in unique_ids if id in db_authors}
 
 app = connexion.App(__name__, specification_dir='.')
 app.add_api(
