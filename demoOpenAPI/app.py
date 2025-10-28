@@ -55,6 +55,7 @@ def find_authors_by_ids(author_ids):
     # In ra log NGAY KHI được gọi
     print(f"[DB-ACCESS] EXECUTING: SELECT * FROM authors WHERE id IN {tuple(unique_ids)};")
     return {id: db_authors[id] for id in unique_ids if id in db_authors}
+    # trả về dictionary có key là author_id và value là đối tượng author
 
 def get_books_with_author_n1():
     """
@@ -83,6 +84,38 @@ def get_books_with_author_n1():
     print(f"=== KẾT THÚC KỊCH BẢN LỖI: TỔNG CỘNG {1 + len(all_books)} QUERIES ĐÃ ĐƯỢC THỰC THI! ===")
     return results, 200
 
+def get_books_with_authors_optimized():
+    """
+    HÀM NÀY ĐÃ ĐƯỢC TỐI ƯU, GIẢI QUYẾT VẤN ĐỀ N+1.
+    """
+    print("\n=== BẮT ĐẦU KỊCH BẢN TỐI ƯU (EAGER LOADING) ===")
+    
+    # 1. Lấy tất cả sách (1 QUERY)
+    all_books = find_all_books()
+    
+    # 2. Thu thập tất cả các author_id cần thiết từ danh sách sách
+    author_ids_needed = [book['author_id'] for book in all_books]
+    
+    # 3. Lấy TẤT CẢ các tác giả cần thiết chỉ trong 1 CÂU QUERY
+    authors_map = find_authors_by_ids(author_ids_needed)
+    # authors_map sẽ có dạng: {101: {author_obj_101}, 102: {author_obj_102}, ...}
+    
+    results = []
+    # 4. Lặp qua từng cuốn sách (KHÔNG CÓ QUERY NÀO Ở ĐÂY)
+    for book in all_books:
+        # Lấy thông tin tác giả từ map đã có sẵn trong bộ nhớ
+        author = authors_map.get(book['author_id'])
+        
+        book_with_author = {
+            "id": book['id'],
+            "title": book['title'],
+            "author": author
+        }
+        results.append(book_with_author)
+        
+    print("=== KẾT THÚC KỊCH BẢN TỐI ƯU: TỔNG CỘNG CHỈ CÓ 2 QUERIES! ===")
+    return results, 200
+    
 def decode_token(token):
     try:
         payload=jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
