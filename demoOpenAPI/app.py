@@ -1,8 +1,11 @@
+from httpx import request
 import connexion
 import jwt
 import time
+import uuid
 from werkzeug.security import check_password_hash
 from connexion.resolver import RestyResolver
+from flask import redirect
 
 SECRET_KEY = 'mysecretkey'
 
@@ -27,6 +30,126 @@ db_books = {
     5: {"id": 5, "title": "Giông Tố", "author_id": 102},
     6: {"id": 6, "title": "Đời Thừa", "author_id": 101},
 }
+
+db_clients = {
+    "my-awesome-client": {
+        "client_id": "my-awesome-client",
+        "client_secret": "my-super-secret",
+        "redirect_uri": "http://127.0.0.1:5000/callback" # Nơi Auth Server sẽ trả code về
+    }
+}
+
+# "Bảng" lưu các authorization_code tạm thời
+db_auth_codes = {}
+
+# === CÁC HÀM TẠO TOKEN MỚI CHO OIDC/OAUTH ===
+
+def _create_id_token(user, client_id):
+    """Tạo một ID Token theo chuẩn OIDC."""
+    payload = {
+        'iss': 'http://localhost:8080', # Issuer - Ai đã cấp token
+        'sub': user['username'],        # Subject - ID của người dùng
+        'aud': client_id,               # Audience - Token này dành cho client nào
+        'name': f"Mr. {user['username'].capitalize()}", # Thông tin hồ sơ
+        'exp': time.time() + 3600,
+        'iat': time.time()
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+def _create_access_token(user, client_id, scope):
+    """Tạo một Access Token chứa scope."""
+    payload = {
+        'iss': 'http://localhost:8080',
+        'sub': user['username'],
+        'aud': client_id,
+        'scope': scope, # Các quyền được cấp
+        'exp': time.time() + 3600,
+        'iat': time.time()
+    }
+    return jwt.encode(payload, SECRET_KEY, algorithm='HS256')
+
+
+# === CÁC ENDPOINT MỚI CHO LUỒNG OAUTH/OIDC ===
+
+def authorize():
+    """Mô phỏng trang đăng nhập và đồng ý của người dùng."""
+    client_id = request.args.get('client_id')
+    redirect_uri = request.args.get('redirect_uri')
+    scope = request.args.get('scope', '')
+    
+    # 1. Xác thực Client
+    client = db_clients.get(client_id)
+    if not client or client['redirect_uri'] != redirect_uri:
+        return {"error": "invalid_client"}, 400
+
+    # 2. (Mô phỏng) Giả sử người dùng "admin" đã đăng nhập và đồng ý
+    # Trong thực tế, đây sẽ là một trang HTML yêu cầu username/password
+    user = db_users['admin']
+
+    # 3. Tạo và lưu authorization_code
+    auth_code = str(uuid.uuid4())
+    db_auth_codes[auth_code] = {
+        "client_id": client_id,
+        "user": user,
+        "scope": scope,
+        "exp": time.time() + 600 # Code chỉ hợp lệ trong 10 phút
+    }
+    
+    # 4. Chuyển hướng người dùng trở lại Client với code
+    return redirect(f"{redirect_uri}?code={auth_code}")
+
+def token(body):
+    """Endpoint để Client đổi authorization_code lấy token."""
+    auth_code = body.get('code')
+    client_id = body.get('client_id')
+    client_secret = body.get('client_secret')
+
+    # 1. Xác thực Client
+    client = db_clients.get(client_id)
+    if not client or client['client_secret'] != client_secret:
+        return {"error": "invalid_client"}, 401
+
+    # 2. Xác thực Code
+    code_data = db_auth_codes.get(auth_code)
+    if not code_data or code_data['client_id'] != client_id or time.time() > code_data['exp']:
+        return {"error": "invalid_grant"}, 400
+
+    # Xóa code đã sử dụng
+    del db_auth_codes[auth_code]
+
+    # 3. Cấp tokens
+    user = code_data['user']
+    scope = code_data['scope']
+    
+    tokens = {
+        "access_token": _create_access_token(user, client_id, scope),
+        "token_type": "Bearer",
+        "expires_in": 3600
+    }
+    # CHỈ CẤP ID_TOKEN NẾU CLIENT YÊU CẦU SCOPE "openid"
+    if 'openid' in scope:
+        tokens['id_token'] = _create_id_token(user, client_id)
+        
+    return tokens, 200
+
+def get_profile(token_info):
+    """
+    Một Resource được bảo vệ.
+    token_info là payload của ACCESS TOKEN đã được xác thực.
+    """
+    # KIỂM TRA SCOPE (Authorization)
+    required_scope = 'profile'
+    if required_scope not in token_info.get('scope', ''):
+        return {"error": "insufficient_scope", "message": f"'{required_scope}' scope is required"}, 403
+
+    # Trả về tài nguyên
+    username = token_info['sub']
+    user_profile = {
+        "username": username,
+        "email": f"{username}@example.com",
+        "motto": "I build great APIs!"
+    }
+    return user_profile, 200
 
 initial_db_books = dict(db_books)
 
