@@ -13,6 +13,32 @@ servers:
 security:
   - bearerAuth: []  # áp dụng bảo mật cho toàn bộ API, API nào không cần bảo mật thì ghi đè trong paths (security: [])
 paths:
+  /authorize:
+    get: 
+      description: Endpoint để cấp mã ủy quyền (authorization code)
+      operationId: app.authorize
+      parameters:
+        - name: response_type
+          in: query
+          required: true
+          schema:
+            type: string
+            enum: [code]
+        - name: client_id
+          in: query
+          required: true
+          schema:
+            type: string
+        - name: redirect_uri
+          in: query
+          required: true
+          shema:
+            type: string
+        - name: scope
+          in: query
+          required: false
+          schema:
+            type: string
   /login:
     post:
       summary: Đăng nhập người dùng
@@ -239,6 +265,15 @@ components:
       bearerFormat: JWT
       x-bearerInfoFunc: app.decode_token # khi nhận 1 bearer token thì sẽ gọi hàm này để giải mã token và lấy thông tin người dùng
   schemas:
+    Profile:
+      type: object
+      properties:
+        username:
+          type: string
+        email:
+          type: string
+        motto: 
+          type: string
     Author:
       type: object
       properties:
