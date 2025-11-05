@@ -97,38 +97,38 @@ def authorize():
     # 4. Chuyển hướng người dùng trở lại Client với code
     return redirect(f"{redirect_uri}?code={auth_code}")
 
-def token(body):
+def token():
     """Endpoint để Client đổi authorization_code lấy token."""
-    auth_code = body.get('code')
-    client_id = body.get('client_id')
-    client_secret = body.get('client_secret')
+    # 1. Đọc dữ liệu từ form
+    data = request.form
+    auth_code = data.get('code')
+    client_id = data.get('client_id')
+    client_secret = data.get('client_secret')
 
-    # 1. Xác thực Client
+    # 2. Xác thực Client
     client = db_clients.get(client_id)
     if not client or client['client_secret'] != client_secret:
         return {"error": "invalid_client"}, 401
 
-    # 2. Xác thực Code
+    # 3. Xác thực code
     code_data = db_auth_codes.get(auth_code)
     if not code_data or code_data['client_id'] != client_id or time.time() > code_data['exp']:
         return {"error": "invalid_grant"}, 400
 
-    # Xóa code đã sử dụng
+    # Xóa code đã dùng
     del db_auth_codes[auth_code]
 
-    # 3. Cấp tokens
+    # 4. Cấp token
     user = code_data['user']
     scope = code_data['scope']
-    
     tokens = {
         "access_token": _create_access_token(user, client_id, scope),
         "token_type": "Bearer",
-        "expires_in": 3600
+        "expires_in": 3600,
     }
-    # CHỈ CẤP ID_TOKEN NẾU CLIENT YÊU CẦU SCOPE "openid"
     if 'openid' in scope:
-        tokens['id_token'] = _create_id_token(user, client_id)
-        
+        tokens["id_token"] = _create_id_token(user, client_id)
+
     return tokens, 200
 
 def get_profile(token_info):
