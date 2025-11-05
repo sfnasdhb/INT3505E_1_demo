@@ -1,11 +1,10 @@
-from httpx import request
 import connexion
 import jwt
 import time
 import uuid
 from werkzeug.security import check_password_hash
 from connexion.resolver import RestyResolver
-from flask import redirect
+from flask import redirect, request
 
 SECRET_KEY = 'mysecretkey'
 
@@ -241,7 +240,8 @@ def get_books_with_authors_optimized():
     
 def decode_token(token):
     try:
-        payload=jwt.decode(token, SECRET_KEY, algorithms=['HS256'])
+        payload = jwt.decode(token, SECRET_KEY, algorithms=['HS256'], options={"verify_aud": False})
+
         # nếu thành công, payload sẽ có dạng:
         # {'sub': 'admin', 'iat': 1678886400, 'exp': 1678887300}
         return payload
@@ -404,22 +404,6 @@ def delete_book_by_id(bookID, token_info):
         del db_books[bookID]
         return {"message": f"Book deleted: {title}"}, 200
     return {"message": "Book not found"}, 404
-
-def find_all_books():
-    # In ra log NGAY KHI được gọi
-    print("[DB-ACCESS] EXECUTING: SELECT * FROM books;")
-    return list(db_books.values())
-
-def find_author_by_id(author_id):
-    # In ra log NGAY KHI được gọi
-    print(f"[DB-ACCESS] EXECUTING: SELECT * FROM authors WHERE id = {author_id};")
-    return db_authors.get(author_id)
-    
-def find_authors_by_ids(author_ids):
-    unique_ids = set(author_ids)
-    # In ra log NGAY KHI được gọi
-    print(f"[DB-ACCESS] EXECUTING: SELECT * FROM authors WHERE id IN {tuple(unique_ids)};")
-    return {id: db_authors[id] for id in unique_ids if id in db_authors}
 
 app = connexion.App(__name__, specification_dir='.')
 app.add_api(

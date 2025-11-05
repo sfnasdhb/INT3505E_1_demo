@@ -1,3 +1,4 @@
+
 openapi: 3.0.0
 
 info:
@@ -17,6 +18,7 @@ paths:
     get: 
       description: Endpoint để cấp mã ủy quyền (authorization code)
       operationId: app.authorize
+      security: []  # không yêu cầu bảo mật cho endpoint này
       parameters:
         - name: response_type
           in: query
@@ -32,13 +34,73 @@ paths:
         - name: redirect_uri
           in: query
           required: true
-          shema:
+          schema:
             type: string
         - name: scope
           in: query
           required: false
           schema:
             type: string
+      responses:         # <-- BẮT BUỘC CÓ
+        '302':
+          description: Redirect về redirect_uri kèm authorization code
+        '400':
+          description: Lỗi từ phía client (invalid_client / invalid_request)
+          content:
+            application/json:
+              schema:
+                type: object
+                properties:
+                  error:
+                    type: string
+  /token:
+    post:
+      summary: (OAUTH) Đổi code lấy token
+      security: []  # không yêu cầu bảo mật cho endpoint này
+      operationId: app.token
+      requestBody:
+        content:
+          application/x-www-form-urlencoded:
+            schema:
+              type: object
+              properties:
+                grant_type:
+                  type: string
+                  enum: [authorization_code]
+                code:
+                  type: string
+                redirect_uri:
+                  type: string
+                client_id:
+                  type: string
+                client_secret:
+                  type: string
+      responses:
+        '200':
+          description: Access và ID token được trả về
+        '400':
+          description: Request không hợp lệ
+        '401':
+          description: Client không hợp lệ
+  /profile:
+    get:
+      summary: (OIDC) Lấy thông tin hồ sơ người dùng
+      description: Truy cập tài nguyên được bảo vệ bằng Access Token.
+      operationId: app.get_profile
+      security:
+        - bearerAuth: [] # Yêu cầu xác thực Bearer Token
+      responses:
+        '200':
+          description: Lấy thông tin hồ sơ thành công
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Profile' # Tham chiếu đến schema Profile đã có
+        '401':
+          description: Unauthorized (Token không hợp lệ hoặc thiếu)
+        '403':
+          description: Forbidden (Token hợp lệ nhưng thiếu scope 'profile')
+          
   /login:
     post:
       summary: Đăng nhập người dùng
