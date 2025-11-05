@@ -261,149 +261,182 @@ def login(body):
         return {'access_token': token}, 200
     return {'message': 'Invalid credentials'}, 401
 
+# ---- BOOK CRUD + LIST (xuất ra author là string, lưu nội bộ author_id) ----
+
 def get_all_books(limit=10, offset=0, author=None, title_contains=None):
-    books = list(db_books.values())
-    
+    # Lấy danh sách và map author_id -> author name tại chỗ
+    books_raw = list(db_books.values())
+
+    # Map sang list có 'author' (string) cho đúng schema trả ra
+    books_out = []
+    for b in books_raw:
+        a = db_authors.get(b['author_id'])
+        books_out.append({
+            "id": b["id"],
+            "title": b["title"],
+            "author": a["name"] if a else None
+        })
+
+    # Lọc theo author (string) / title
     if author:
-        books = [book for book in books if book['author'].lower() == author.lower()]
+        au = author.lower()
+        books_out = [bk for bk in books_out if (bk["author"] or "").lower() == au]
 
     if title_contains:
-        books = [book for book in books if title_contains.lower() in book['title'].lower()]
-        
-    total_items = len(books)
+        kw = title_contains.lower()
+        books_out = [bk for bk in books_out if kw in bk["title"].lower()]
 
-    paginated_books = books[offset : offset + limit]
+    # Phân trang an toàn
+    total_items = len(books_out)
+    if offset < 0:
+        offset = 0
+    limit = int(limit) if limit is not None else 10
+    paginated = books_out[offset: offset + max(0, limit)]
 
-    response = {
+    return {
         "metadata": {
             "total_items": total_items,
             "offset": offset,
             "limit": limit,
-            "item_count": len(paginated_books) 
+            "item_count": len(paginated)
         },
-        "data": paginated_books
-    }
-    
-    return response, 200
-    #tuy nhiên sẽ xảy ra lỗi offset nếu offset > total_items
-    #lỗi không đồng bộ, tức ví dụ:
-    #A,B,C,D,E,F,G,H,I,J
-    #limit=5,offset=0 -> A,B,C,D,E
-    #xóa E -> limit=5,offset=5 -> G,H,I,J (thiếu F) (A,B,C,D,F,G,H,I,J)
-    #đang xem trang 1 có A, B, C, D, F
-    #chèn V vào giữa D và F -> A,B,C,D,V,F,G,H,I,J
-    #limit=5,offset=5 -> F,G,H,I,J -> nhìn thấy F hai lần
+        "data": paginated
+    }, 200
+
 
 def get_all_books_by_cursor(limit=5, after_cursor=0):
-    """
-    Lấy danh sách sách sử dụng Cursor Pagination.
-    Con trỏ ở đây chính là ID của cuốn sách.
-    - limit: Số lượng sách cần lấy.
-    - after_cursor: ID của cuốn sách cuối cùng đã thấy ở trang trước.
-    """
-    # Lấy toàn bộ sách và đảm bảo chúng được sắp xếp theo ID (con trỏ)
+    # Sắp xếp theo id, rồi map author_id -> author name khi trả ra
     all_books = sorted(list(db_books.values()), key=lambda x: x['id'])
 
-    # Tìm vị trí bắt đầu để lấy dữ liệu
     start_index = 0
-    if after_cursor > 0:
-        # Tìm index của cuốn sách có ID là cursor
-        found_index = -1
-        for i, book in enumerate(all_books):
-            if book['id'] == after_cursor:
-                found_index = i
-                break   
-        
-        # Nếu tìm thấy, vị trí bắt đầu sẽ là ngay sau nó
-        if found_index != -1:
-            start_index = found_index + 1
-
-    # Lấy lát cắt dữ liệu cho trang hiện tại
-    results = all_books[start_index : start_index + limit]
-
-    # Xác định con trỏ cho trang tiếp theo
-    next_cursor = None
-    if len(results) > 0:
-        # Lấy ID của cuốn sách cuối cùng trong kết quả
-        last_book_id = results[-1]['id']
-        
-        # Kiểm tra xem có còn sách nào sau cuốn sách cuối cùng này không
-        # (Bằng cách xem index của nó trong danh sách đầy đủ)
-        last_book_index_in_all = -1
-        for i, book in enumerate(all_books):
-            if book['id'] == last_book_id:
-                last_book_index_in_all = i
+    if after_cursor and after_cursor > 0:
+        for i, b in enumerate(all_books):
+            if b['id'] == after_cursor:
+                start_index = i + 1
                 break
-        
-        if last_book_index_in_all < len(all_books) - 1:
-            next_cursor = last_book_id
 
-    # Tạo cấu trúc response
-    response = {
+    limit = int(limit) if limit is not None else 5
+    slice_books = all_books[start_index: start_index + max(0, limit)]
+
+    data = []
+    for b in slice_books:
+        a = db_authors.get(b['author_id'])
+        data.append({
+            "id": b["id"],
+            "title": b["title"],
+            "author": a["name"] if a else None
+        })
+
+    next_cursor = None
+    if data:
+        last_id = data[-1]['id']
+        # còn phần tử phía sau không?
+        for i, b in enumerate(all_books):
+            if b['id'] == last_id and i < len(all_books) - 1:
+                next_cursor = last_id
+                break
+
+    return {
         "metadata": {
-            "item_count": len(results),
-            "next_cursor": next_cursor, # Con trỏ để client dùng cho lần gọi sau
+            "item_count": len(data),
+            "next_cursor": next_cursor,
             "has_next_page": next_cursor is not None
         },
-        "data": results
-    }
-    
-    return response, 200
+        "data": data
+    }, 200
 
-def get_book_by_id(bookID, token_info): 
-    book = db_books.get(bookID)
-    if book:
-        return book, 200
-    return {"message": "Book not found"}, 404
 
-def simulate_insert_start(body):
-    """Mô phỏng việc chèn một cuốn sách mới vào đầu danh sách."""
+def get_book_by_id(bookID, token_info):
+    b = db_books.get(bookID)
+    if not b:
+        return {"message": "Book not found"}, 404
+    a = db_authors.get(b['author_id'])
+    return {"id": b["id"], "title": b["title"], "author": a["name"] if a else None}, 200
+
+
+def create_book(body, token_info):
+    # Lưu nội bộ theo author_id; đầu vào body['author'] là tên tác giả (string)
+    print("Hành động được thực hiện bởi:", token_info['sub'])
     global book_id_counter
     book_id_counter += 1
-    new_book = {
-        "id": book_id_counter,
-        "title": body.get('title', 'Sách Mới Chèn'),
-        "author": body.get('author', 'Tác Giả Mới')
-    }
-    
-    # Để chèn vào "đầu", chúng ta phải tạo một dict mới
-    # Đây là cách mô phỏng, trong SQL thực tế nó sẽ tự sắp xếp
-    temp_db = {book_id_counter: new_book}
-    temp_db.update(db_books)
-    db_books.clear()
-    db_books.update(temp_db)
-    
-    print(f"--- SIMULATE INSERT: Book {book_id_counter} inserted ---")
-    return new_book, 201
 
-def create_book(body, token_info): # tham số token_info: được sinh ra ở phía server khi gọi hàm decode_token (khi giải mã thành công)
-                        # chính là payload được return
-    print("Hành động được thực hiện bởi:", token_info['sub'])  
-    global book_id_counter
-    book_id_counter+=1
-    new_book = {
+    author_name = body['author']
+    author_id = None
+    low = author_name.lower()
+    for aid, a in db_authors.items():
+        if a['name'].lower() == low:
+            author_id = aid
+            break
+
+    # nếu không match, vẫn cho tạo với author_id=None
+    db_books[book_id_counter] = {
         "id": book_id_counter,
         "title": body['title'],
-        "author": body['author']
+        "author_id": author_id
     }
-    db_books[book_id_counter] = new_book
-    return new_book, 201
+
+    return {"id": book_id_counter, "title": body['title'], "author": author_name}, 201
+
 
 def update_book_by_id(bookID, body, token_info):
     print("Hành động được thực hiện bởi:", token_info['sub'])
-    existing_book = db_books.get(bookID)
-    if existing_book:
-        existing_book['title'] = body['title']
-        existing_book['author'] = body['author']
-        return existing_book, 200
+    b = db_books.get(bookID)
+    if not b:
+        return {"message": "Book not found"}, 404
+
+    author_name = body['author']
+    author_id = None
+    low = author_name.lower()
+    for aid, a in db_authors.items():
+        if a['name'].lower() == low:
+            author_id = aid
+            break
+
+    b['title'] = body['title']
+    b['author_id'] = author_id
+
+    return {"id": b["id"], "title": b["title"], "author": author_name}, 200
+
 
 def delete_book_by_id(bookID, token_info):
-    
     if bookID in db_books:
-        title = db_books[bookID]['title']
         del db_books[bookID]
-        return {"message": f"Book deleted: {title}"}, 200
+        return "", 204  # khớp openapi.yaml: 204 No Content
     return {"message": "Book not found"}, 404
+
+
+def simulate_insert_start(body):
+    """Mô phỏng chèn sách vào đầu danh sách (vẫn lưu bằng author_id)."""
+    global book_id_counter
+    book_id_counter += 1
+
+    author_name = body.get('author', 'Tác Giả Mới')
+    author_id = None
+    low = author_name.lower()
+    for aid, a in db_authors.items():
+        if a['name'].lower() == low:
+            author_id = aid
+            break
+
+    new_book_internal = {
+        "id": book_id_counter,
+        "title": body.get('title', 'Sách Mới Chèn'),
+        "author_id": author_id
+    }
+
+    # chèn vào "đầu" (mô phỏng)
+    temp = {book_id_counter: new_book_internal}
+    temp.update(db_books)
+    db_books.clear()
+    db_books.update(temp)
+
+    print(f"--- SIMULATE INSERT: Book {book_id_counter} inserted ---")
+    # trả về đúng schema: author là string (tên)
+    return {
+        "id": new_book_internal["id"],
+        "title": new_book_internal["title"],
+        "author": author_name
+    }, 201
 
 app = connexion.App(__name__, specification_dir='.')
 app.add_api(
