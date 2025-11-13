@@ -1,29 +1,73 @@
-import Product from '../models/Product.js';
+const Product = require('../models/Product');
 
-export const listProducts = async () => {
+function pickBody(args) {
+  // Dùng cho mọi trường hợp body có thể là "body" hoặc "product"
+  return args.product ?? args.body ?? {};
+}
+
+function notFound() {
+  const e = new Error('Not found');
+  e.status = 404;
+  return e;
+}
+
+const listProducts = async () => {
   const items = await Product.find().lean();
-  return items.map(p => ({ id: String(p._id), name: p.name, price: p.price, stock: p.stock }));
+  return items.map(p => ({
+    id: String(p._id),
+    name: p.name,
+    price: p.price,
+    stock: p.stock,
+  }));
 };
 
-export const createProduct = async ({ body }) => {
-  const doc = await Product.create(body);
-  return { id: String(doc._id), name: doc.name, price: doc.price, stock: doc.stock };
+const createProduct = async (args) => {
+  const data = pickBody(args);
+  const doc = await Product.create(data);
+  return {
+    id: String(doc._id),
+    name: doc.name,
+    price: doc.price,
+    stock: doc.stock,
+  };
 };
 
-export const getProduct = async ({ params }) => {
-  const doc = await Product.findById(params.id).lean();
-  if (!doc) { const e = new Error('Not found'); e.status = 404; throw e; }
-  return { id: String(doc._id), name: doc.name, price: doc.price, stock: doc.stock };
+const getProduct = async ({ id }) => {
+  const doc = await Product.findById(id).lean();
+  if (!doc) throw notFound();
+  return {
+    id: String(doc._id),
+    name: doc.name,
+    price: doc.price,
+    stock: doc.stock,
+  };
 };
 
-export const updateProduct = async ({ params, body }) => {
-  const doc = await Product.findByIdAndUpdate(params.id, body, { new: true }).lean();
-  if (!doc) { const e = new Error('Not found'); e.status = 404; throw e; }
-  return { id: String(doc._id), name: doc.name, price: doc.price, stock: doc.stock };
+const updateProduct = async (args) => {
+  const { id } = args;
+  const data = pickBody(args);
+  const updated = await Product.findByIdAndUpdate(id, data, { new: true }).lean();
+
+  if (!updated) throw notFound();
+
+  return {
+    id: String(updated._id),
+    name: updated.name,
+    price: updated.price,
+    stock: updated.stock,
+  };
 };
 
-export const deleteProduct = async ({ params }) => {
-  const doc = await Product.findByIdAndDelete(params.id).lean();
-  if (!doc) { const e = new Error('Not found'); e.status = 404; throw e; }
+const deleteProduct = async ({ id }) => {
+  const doc = await Product.findByIdAndDelete(id).lean();
+  if (!doc) throw notFound();
   return { message: 'Deleted' };
+};
+
+module.exports = {
+  listProducts,
+  createProduct,
+  getProduct,
+  updateProduct,
+  deleteProduct,
 };

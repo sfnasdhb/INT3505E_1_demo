@@ -21,14 +21,14 @@ class Controller {
   }
 
   static sendError(response, error) {
-    response.status(error.code || 500);
-    if (error.error instanceof Object) {
-      response.json(error.error);
-    } else {
-      response.end(error.error || error.message);
-    }
+    // Sửa lại để đọc cả error.status hoặc error.code, và mặc định là 500
+    const statusCode = error.status || error.code || 500;
+    
+    // Luôn trả về một JSON nhất quán
+    response.status(statusCode).json({
+      message: error.message || 'An unexpected error occurred.',
+    });
   }
-
   /**
   * Files have been uploaded to the directory defined by config.js as upload directory
   * Files have a temporary name, that was saved as 'filename' of the file object that is

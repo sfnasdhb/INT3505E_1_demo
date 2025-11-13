@@ -1,0 +1,97 @@
+openapi: 3.0.0
+info:
+  title: Product Service
+  version: 1.0.0
+servers:
+  - url: /
+paths:
+  /api/products:
+    get:
+      summary: List products
+      operationId: listProducts
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema:
+                type: array
+                items: { $ref: '#/components/schemas/Product' }
+    post:
+      summary: Create product
+      operationId: createProduct
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductInput' }
+      responses:
+        '201':
+          description: Created
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+  /api/products/{id}:
+    get:
+      summary: Get by id
+      operationId: getProduct
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '404': { description: Not found }
+    put:
+      summary: Update
+      operationId: updateProduct
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ProductInput' }
+      responses:
+        '200':
+          description: OK
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Product' }
+        '404': { description: Not found }
+    delete:
+      summary: Delete
+      operationId: deleteProduct
+      parameters:
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        '200': { description: Deleted }
+        '404': { description: Not found }
+components:
+  schemas:
+    Product:
+      type: object
+      properties:
+        id: { type: string, example: "6791a8..." }
+        name: { type: string, example: "iPhone 15" }
+        price: { type: number, example: 23990000 }
+        stock: { type: integer, example: 5 }
+      required: [id, name, price, stock]
+    ProductInput:
+      type: object
+      properties:
+        name: { type: string }
+        price: { type: number }
+        stock: { type: integer }
+      required: [name, price, stock]

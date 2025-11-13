@@ -67,14 +67,25 @@ class ExpressServer {
   }
 
   launch() {
-    // Error handler
+    // ================== BẮT ĐẦU THAY THẾ TỪ ĐÂY ==================
+    // Error handler - PHIÊN BẢN CẢI TIẾN
     // eslint-disable-next-line no-unused-vars
     this.app.use((err, req, res, next) => {
-      res.status(err.status || 500).json({
-        message: err.message || err,
-        errors: err.errors || '',
+      // Lấy status code từ đối tượng lỗi, nếu không có thì mặc định là 500
+      const statusCode = err.status || 500;
+      // Lấy message từ đối tượng lỗi, nếu không có thì đặt một message mặc định
+      const message = err.message || 'Internal Server Error';
+
+      // Dòng này rất quan trọng để gỡ lỗi, nó sẽ in lỗi đầy đủ ra console
+      console.error('[Error Handler] Caught an error:', err);
+
+      // Trả về response lỗi
+      res.status(statusCode).json({
+        message: message,
+        errors: err.errors || [], // Dùng mảng rỗng thay vì chuỗi rỗng cho an toàn
       });
     });
+    // ================== KẾT THÚC THAY THẾ TẠI ĐÂY ==================
 
     // ✅ lưu handle server để close() được
     this.server = http.createServer(this.app).listen(this.port, () => {

@@ -1,38 +1,30 @@
-/**
- * The DefaultController file is a very simple one, which does not need to be changed manually,
- * unless there's a case where business logic routes the request to an entity which is not
- * the service.
- * The heavy lifting of the Controller item is done in Request.js - that is where request
- * parameters are extracted and sent to the service, and where response is handled.
- */
-
 const Controller = require('./Controller');
 const service = require('../services/DefaultService');
-const createProduct = async (request, response) => {
-  await Controller.handleRequest(request, response, service.createProduct);
+
+const listProducts = async (req, res) => {
+  await Controller.handleRequest(req, res, service.listProducts);
 };
 
-const deleteProduct = async (request, response) => {
-  await Controller.handleRequest(request, response, service.deleteProduct);
+const getProduct = async (req, res) => {
+  await Controller.handleRequest(req, res, service.getProduct);
 };
 
-const getProduct = async (request, response) => {
-  await Controller.handleRequest(request, response, service.getProduct);
+const createProduct = async (req, res) => {
+  await Controller.handleRequest(req, res, service.createProduct);
 };
 
-const listProducts = async (request, response) => {
-  await Controller.handleRequest(request, response, service.listProducts);
+const updateProduct = async (req, res) => {
+  await Controller.handleRequest(req, res, service.updateProduct);
 };
 
-const updateProduct = async (request, response) => {
-  await Controller.handleRequest(request, response, service.updateProduct);
+const deleteProduct = async (req, res) => {
+  await Controller.handleRequest(req, res, service.deleteProduct);
 };
-
 
 module.exports = {
-  createProduct,
-  deleteProduct,
-  getProduct,
   listProducts,
+  getProduct,
+  createProduct,
   updateProduct,
+  deleteProduct,
 };

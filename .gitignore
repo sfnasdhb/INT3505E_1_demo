@@ -13,3 +13,4 @@ venv/
 # IDE settings
 .vscode/
 .idea/
+.node_modules/
