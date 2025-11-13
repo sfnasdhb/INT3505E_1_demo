@@ -1,0 +1,376 @@
+{
+	"info": {
+		"_postman_id": "1a942614-2e4e-4671-83ef-16c14997dba9",
+		"name": "DemoGenCode",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json",
+		"_exporter_id": "47320747",
+		"_collection_link": "https://nguyenthoitri0909-7354629.postman.co/workspace/Th%E1%BB%9Di-Tr%C3%AD-Nguy%E1%BB%85n's-Workspace~af51471d-df5b-4b87-8ace-2d384a136a3a/collection/47320747-1a942614-2e4e-4671-83ef-16c14997dba9?action=share&source=collection_link&creator=47320747"
+	},
+	"item": [
+		{
+			"name": "CreateProduct",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Lấy nội dung JSON từ body của request đã gửi đi\r",
+							"const requestBody = JSON.parse(pm.request.body.raw);\r",
+							"\r",
+							"// 1. Kiểm tra mã trạng thái trả về là 200 OK\r",
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"// 2. Kiểm tra response body có phải là JSON hợp lệ\r",
+							"pm.test(\"Response body is a valid JSON\", function () {\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"const jsonData = pm.response.json();\r",
+							"\r",
+							"// 3. Kiểm tra các trường dữ liệu cần thiết có tồn tại trong response không\r",
+							"pm.test(\"Response has required fields: id, name, price, stock\", function () {\r",
+							"    pm.expect(jsonData).to.have.property('id');\r",
+							"    pm.expect(jsonData).to.have.property('name');\r",
+							"    pm.expect(jsonData).to.have.property('price');\r",
+							"    pm.expect(jsonData).to.have.property('stock');\r",
+							"});\r",
+							"\r",
+							"// 4. Kiểm tra kiểu dữ liệu của các trường\r",
+							"pm.test(\"Data types are correct\", function () {\r",
+							"    pm.expect(jsonData.id).to.be.a('string');\r",
+							"    pm.expect(jsonData.name).to.be.a('string');\r",
+							"    pm.expect(jsonData.price).to.be.a('number');\r",
+							"    pm.expect(jsonData.stock).to.be.a('number');\r",
+							"});\r",
+							"\r",
+							"// 5. Kiểm tra dữ liệu trả về có khớp với dữ liệu đã gửi đi không\r",
+							"pm.test(\"Response data matches request data\", function () {\r",
+							"    pm.expect(jsonData.name).to.eql(requestBody.name);\r",
+							"    pm.expect(jsonData.price).to.eql(requestBody.price);\r",
+							"    pm.expect(jsonData.stock).to.eql(requestBody.stock);\r",
+							"});\r",
+							"\r",
+							"// 6. Lưu ID của sản phẩm vừa tạo vào biến môi trường để dùng cho các request sau\r",
+							"pm.test(\"Save product ID to environment variable\", function () {\r",
+							"    pm.environment.set(\"productId\", jsonData.id);\r",
+							"    console.log(\"Saved new product ID: \" + jsonData.id);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n  \"price\": 0.21,\r\n  \"name\": \"bach\",\r\n  \"stock\": 3\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/products",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"products"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetProducts",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// 1. Kiểm tra mã trạng thái trả về là 200 OK\r",
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"// 2. Kiểm tra response body có phải là một JSON hợp lệ\r",
+							"pm.test(\"Response is a valid JSON\", function () {\r",
+							"    pm.response.to.be.json;\r",
+							"});\r",
+							"\r",
+							"const jsonData = pm.response.json();\r",
+							"\r",
+							"// 3. Kiểm tra xem response body có phải là một array (danh sách) không\r",
+							"pm.test(\"Response body is an array\", function () {\r",
+							"    pm.expect(jsonData).to.be.an('array');\r",
+							"});\r",
+							"\r",
+							"// 4. Kiểm tra xem danh sách có chứa ít nhất một sản phẩm không\r",
+							"// (Điều này chỉ đúng nếu bạn chạy test này sau khi đã tạo sản phẩm)\r",
+							"pm.test(\"Array contains at least one product\", function () {\r",
+							"    pm.expect(jsonData).to.not.be.empty;\r",
+							"});\r",
+							"\r",
+							"// 5. Kiểm tra cấu trúc của đối tượng ĐẦU TIÊN trong danh sách\r",
+							"// Điều này giả định rằng tất cả các đối tượng khác trong danh sách đều có cùng cấu trúc.\r",
+							"// Đây là một cách kiểm tra hiệu quả mà không cần lặp qua toàn bộ danh sách.\r",
+							"pm.test(\"Each product object in the array has the correct structure and data types\", function () {\r",
+							"    if (jsonData.length > 0) {\r",
+							"        const firstProduct = jsonData[0];\r",
+							"        \r",
+							"        // Kiểm tra có đủ các key cần thiết không\r",
+							"        pm.expect(firstProduct).to.have.all.keys('id', 'name', 'price', 'stock');\r",
+							"        \r",
+							"        // Kiểm tra kiểu dữ liệu của từng key\r",
+							"        pm.expect(firstProduct.id).to.be.a('string');\r",
+							"        pm.expect(firstProduct.name).to.be.a('string');\r",
+							"        pm.expect(firstProduct.price).to.be.a('number');\r",
+							"        pm.expect(firstProduct.stock).to.be.a('number');\r",
+							"    }\r",
+							"});\r",
+							"\r",
+							"// 6. (Nâng cao) Kiểm tra xem sản phẩm vừa tạo có nằm trong danh sách không\r",
+							"const createdProductId = pm.environment.get(\"productId\");\r",
+							"if (createdProductId) {\r",
+							"    pm.test(\"The newly created product exists in the list\", function () {\r",
+							"        const productExists = jsonData.some(product => product.id === createdProductId);\r",
+							"        pm.expect(productExists).to.be.true;\r",
+							"    });\r",
+							"}"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"protocolProfileBehavior": {
+				"disableBodyPruning": true
+			},
+			"request": {
+				"method": "GET",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/products",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"products"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetProductByID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// 1. Kiểm tra mã trạng thái trả về là 200 OK\r",
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"const jsonData = pm.response.json();\r",
+							"const expectedId = pm.environment.get(\"productId\");\r",
+							"\r",
+							"// 2. Kiểm tra ID của sản phẩm trả về có đúng là ID đã lưu không\r",
+							"pm.test(\"Product ID matches the one from environment\", function () {\r",
+							"    pm.expect(jsonData.id).to.eql(expectedId);\r",
+							"});\r",
+							"\r",
+							"// 3. Kiểm tra cấu trúc của sản phẩm trả về\r",
+							"pm.test(\"Product object has the correct structure\", function () {\r",
+							"    pm.expect(jsonData).to.have.all.keys('id', 'name', 'price', 'stock');\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}/api/products/{{productId}}",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"products",
+						"{{productId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "UpdateProductID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// Lấy nội dung JSON từ body của request cập nhật\r",
+							"const requestBody = JSON.parse(pm.request.body.raw);\r",
+							"\r",
+							"// 1. Kiểm tra mã trạng thái trả về là 200 OK\r",
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"const jsonData = pm.response.json();\r",
+							"\r",
+							"// 2. Kiểm tra dữ liệu trả về đã được cập nhật chính xác\r",
+							"pm.test(\"Response body reflects the updates\", function () {\r",
+							"    // Giả sử body của request PUT có dạng {\"price\": 15.5, \"stock\": 25}\r",
+							"    pm.expect(jsonData.price).to.eql(requestBody.price);\r",
+							"    pm.expect(jsonData.stock).to.eql(requestBody.stock);\r",
+							"});\r",
+							"\r",
+							"// 3. Kiểm tra ID của sản phẩm không bị thay đổi sau khi cập nhật\r",
+							"pm.test(\"Product ID remains unchanged\", function () {\r",
+							"    const expectedId = pm.environment.get(\"productId\");\r",
+							"    pm.expect(jsonData.id).to.eql(expectedId);\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "PUT",
+				"header": [],
+				"body": {
+					"mode": "raw",
+					"raw": "{\r\n    \"name\": \"bach updated\",\r\n    \"price\": 15.5,\r\n    \"stock\": 25\r\n}",
+					"options": {
+						"raw": {
+							"language": "json"
+						}
+					}
+				},
+				"url": {
+					"raw": "{{baseURL}}/api/products/{{productId}}",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"products",
+						"{{productId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "DeleteProductByID",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"// 1. Kiểm tra mã trạng thái trả về là 200 OK\r",
+							"pm.test(\"Status code is 200\", function () {\r",
+							"    pm.response.to.have.status(200);\r",
+							"});\r",
+							"\r",
+							"const jsonData = pm.response.json();\r",
+							"\r",
+							"// 2. Kiểm tra message trả về xác nhận đã xóa\r",
+							"pm.test(\"Response message indicates successful deletion\", function () {\r",
+							"    pm.expect(jsonData.message).to.eql(\"Deleted\");\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "DELETE",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}/api/products/{{productId}}",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"products",
+						"{{productId}}"
+					]
+				}
+			},
+			"response": []
+		},
+		{
+			"name": "GetProductByID last test",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 404 Not Found\", function () {\r",
+							"    pm.response.to.have.status(404);\r",
+							"});\r",
+							"\r",
+							"// 2. (Tùy chọn) Xóa biến productId khỏi môi trường sau khi đã xác nhận xóa thành công\r",
+							"pm.test(\"Clean up environment variable\", function () {\r",
+							"    pm.environment.unset(\"productId\");\r",
+							"    console.log(\"Product ID has been cleared from environment.\");\r",
+							"});"
+						],
+						"type": "text/javascript",
+						"packages": {},
+						"requests": {}
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{baseURL}}/api/products/{{productId}}",
+					"host": [
+						"{{baseURL}}"
+					],
+					"path": [
+						"api",
+						"products",
+						"{{productId}}"
+					]
+				}
+			},
+			"response": []
+		}
+	]
+}
