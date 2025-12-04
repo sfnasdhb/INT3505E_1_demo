@@ -1,0 +1,7 @@
+global:
+  scrape_interval: 5s # Quét 5 giây/lần cho nhanh
+
+scrape_configs:
+  - job_name: 'flask_app'
+    static_configs:
+      - targets: ['flask-app:5000']

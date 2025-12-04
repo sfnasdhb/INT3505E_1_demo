@@ -1,0 +1,16 @@
+version: '3.8'
+
+services:
+  flask-app:
+    build: .
+    container_name: final-api
+    ports:
+      - "5000:5000"
+
+  prometheus:
+    image: prom/prometheus
+    container_name: final-prometheus
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml
+    ports:
+      - "9090:9090"
