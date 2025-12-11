@@ -53,5 +53,35 @@ def ratelimit_handler(e):
     logger.warning("Phát hiện spam!", extra={'ip': request.remote_addr})
     return jsonify({"error": "Bạn gửi quá nhiều request! Vui lòng đợi."}), 429
 
+circuit_state = "CLOSED"
+failure_count = 0
+FAILURE_THRESHOLD = 3
+
+@app.route('/call-external')
+def call_external():
+    global circuit_state, failure_count
+    
+    if circuit_state == "OPEN":
+        return jsonify({"error": "Circuit Breaker is OPEN. Fail-fast active!", "status": 503}), 503
+
+    # Giả lập gọi service ngoài bị lỗi
+    success = False 
+    if not success:
+        failure_count += 1
+        if failure_count >= FAILURE_THRESHOLD:
+            circuit_state = "OPEN"
+            logger.error("Circuit Breaker switched to OPEN")
+        return jsonify({"error": "External service failed", "attempt": failure_count}), 500
+    
+    return jsonify({"message": "Success"})
+
+# Thêm route để reset cầu dao khi demo xong
+@app.route('/reset-circuit')
+def reset_circuit():
+    global circuit_state, failure_count
+    circuit_state = "CLOSED"
+    failure_count = 0
+    return jsonify({"message": "Circuit Breaker RESET to CLOSED"})
+
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5000)
